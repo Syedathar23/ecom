@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js" // Or "prisma-client" in v7+
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql" // Your DB type
+}
+
+model User {
+  id                              Int       @id @default(autoincrement())
+  email                           String    @unique
+  password                        String
+  firstName                       String
+  lastName                        String
+  stripe_customer_id              String?
+  subscriptions                   Json? // [] in Mongo → Json in Postgres
+  isVerified                      Boolean   @default(false)
+  accountVerificationToken        String?
+  accountVerificationTokenExpires DateTime?
+  passwordChangeAt                DateTime?
+  passwordResetToken              String?
+  passwordResetExpires            DateTime?
+  profilePhoto                    String    @default("https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_960_720.png")
+
+  role          String  @default("freeuser")
+  isBlocked     Boolean @default(false)
+  isSubscribed  String?
+  isSubCanceled String?
+
+  saved SavedProduct[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@map("users")
+}
+
+model SavedProduct {
+  userId    Int
+  productId Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@map("saved_products")
+}
+
+model Product {
+  id              Int     @id @default(autoincrement())
+  title           String?
+  description     String?
+  description2    String?
+  description3    String?
+  descriptionHero String?
+  adcopyFb1       String?
+  adcopyFb2       String?
+  adcopy1         String?
+  adcopy2         String?
+  adcopy3         String?
+  creative1       String?
+  creative2       String?
+
+  free         Boolean @default(false)
+  priceOfGoods Float?
+  sellPrice    Float?
+
+  aliexpressLink     String?
+  cjdropshippingLink String?
+  competitorShop     String?
+  productAge         String?
+  popullarity        String? // ← Also fix spelling to "popularity"
+  competitivness     Int? // ← Fix spelling to "competitiveness"
+  bestPlatform       String?
+  category           String   @default("Beauty")
+  keywords           String[]
+
+  image1 String?
+  image2 String?
+  image3 String?
+  image4 String?
+  image5 String?
+  image6 String?
+  image7 String?
+  image8 String?
+
+  // ✅ Correct relation to User
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  savedBy SavedProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("products")
+}
