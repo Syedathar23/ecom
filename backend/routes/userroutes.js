@@ -16,7 +16,7 @@ route.put("/updatepassword",updatePassword);
 route.put("/resetpassword",resetpassword);
 route.post("/resetpasswordafterclick",userPasswordResetAfterClick);
 route.post("/verifyaccount",userAuth,verifyAccount);
-route.put("/verifyaccountafterclick",userAuth,verifyAccountAfterClick);
+route.put("/verifyaccountafterclick",verifyAccountAfterClick);
 route.put("/updateuserfield",userAuth,updateUserField);
 route.put("/savedproducts",userAuth,saveProduct);
 route.delete("/unsaveproduct",userAuth,unsaveProducts);

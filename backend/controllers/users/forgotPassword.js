@@ -2,9 +2,8 @@
 import asyncHandler from "express-async-handler";
 import { query } from "../../db.js";
 import { createPasswordResetToken } from "../../token/authtoken.js";
-import sgMail from "@sendgrid/mail";
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+import emailService from "../../utils/emailService.js";
+import { getPasswordResetEmailTemplate } from "../../utils/emailTemplates.js";
 
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
@@ -24,13 +23,13 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   const msg = {
     to: user.email,
-    from: 'your@email.com',
-    subject: 'Reset Your SkillBolt Password',
-    text: `Click here to reset your password: ${resetLink}`,
-    html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+    from: `"LUXE Support" <${process.env.EMAIL_USER}>`,
+    subject: 'Reset your LUXE password',
+    text: `Hi ${user.firstname}, please reset your password by clicking here: ${resetLink}`,
+    html: getPasswordResetEmailTemplate(user.firstname, resetLink),
   };
 
-  await sgMail.send(msg);
+  await emailService.send(msg);
 
   res.status(200).json({ success: true, message: "Password reset link sent to your email" });
 });

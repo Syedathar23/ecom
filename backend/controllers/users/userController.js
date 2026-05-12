@@ -6,9 +6,10 @@ import jwt from "jsonwebtoken";
 import { query } from "../../db.js"; 
 import Stripe from "stripe";
 import dotenv from "dotenv";
-import sgMail from '@sendgrid/mail'
+import emailService from "../../utils/emailService.js";
 import crypto from "crypto";
 import { createAccountVerificationToken, createPasswordResetToken } from "../../token/authtoken.js";
+import { getVerificationEmailTemplate } from "../../utils/emailTemplates.js";
 
 dotenv.config();
 
@@ -17,7 +18,6 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 // Register User – ESM + Prisma + PostgreSQL
 export const registerUser = asyncHandler(async (req, res) => {
   const { email, password, firstName, lastName } = req.body;
-  console.log("Registration attempt for:", email);
 
   // 1. Check if user already exists
   const existingUserResult = await query(
@@ -26,7 +26,6 @@ export const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (existingUserResult.rows.length > 0) {
-    console.log("User already exists");
     return res.status(409).json({
       success: false,
       message: "User already exists! Please login.",
@@ -34,35 +33,22 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   // 2. Hash password
-  console.log("Hashing password...");
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   // 3. Create Stripe customer
-  console.log("Creating Stripe customer...");
-  let stripeCustomerId = null;
-  try {
-    const stripeCustomer = await stripe.customers.create({
-      email: email.toLowerCase(),
-      name: `${firstName} ${lastName}`,
-    });
-    stripeCustomerId = stripeCustomer.id;
-    console.log("Stripe customer created:", stripeCustomerId);
-  } catch (stripeError) {
-    console.error("Stripe customer creation failed:", stripeError.message);
-    // Continue anyway or throw? The user asked for "Complete user authentication flow with database synchronization"
-    // For now, let's allow it to fail gracefully if it's just a test key issue
-  }
+  const stripeCustomer = await stripe.customers.create({
+    email: email.toLowerCase(),
+    name: `${firstName} ${lastName}`,
+  });
 
   // 4. Create user in DB
-  console.log("Inserting user into database...");
   const newUserResult = await query(
     `INSERT INTO users (email, password, firstname, lastname, stripe_customer_id, createdat, updatedat) 
-     VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, email, firstname, lastname, stripe_customer_id, role, createdat`,
-    [email.toLowerCase(), hashedPassword, firstName, lastName, stripeCustomerId]
+     VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, email, firstname, lastname, stripe_customer_id, role, isverified, createdat`,
+    [email.toLowerCase(), hashedPassword, firstName, lastName, stripeCustomer.id]
   );
   const newUser = newUserResult.rows[0];
-  console.log("User inserted with ID:", newUser.id);
 
   // 5. Generate JWT
   const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET_KEY, {
@@ -79,29 +65,24 @@ export const registerUser = asyncHandler(async (req, res) => {
       maxAge: 12 * 60 * 60 * 1000, // 12 hours
     });
 
-  try {
-    console.log("Creating verification token...");
-    const verificationToken = await createAccountVerificationToken(newUser.id);
-    const verificationLink = `http://localhost:3000/verify?token=${verificationToken}`;
+  const verificationToken = await createAccountVerificationToken(newUser.id);
 
-    const msg = {
-      to: newUser.email,
-      from: 'syedathar23m@gmail.com',
-      subject: 'Verify Your Email for SkillBolt',
-      text: `Click here to verify your email: ${verificationLink}`,
-      html: `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`,
-    };
+  // Send verification email
+  const verificationLink = `http://localhost:3000/verify?token=${verificationToken}`;
 
-    console.log("Sending verification email...");
-    await sgMail.send(msg);
-    console.log("Verification email sent successfully");
-  } catch (emailError) {
-    console.error("Failed to send verification email:", emailError.message);
-  }
+  const msg = {
+    to: newUser.email,
+    from: `"LUXE Support" <${process.env.EMAIL_USER}>`,
+    subject: 'Verify your LUXE account',
+    text: `Hi ${newUser.firstname}, please verify your email address by clicking here: ${verificationLink}`,
+    html: getVerificationEmailTemplate(newUser.firstname, verificationLink),
+  };
+
+  await emailService.send(msg);
 
   res.json({
     success: true,
-    message: "User registered! (Note: Email verification might be delayed)",
+    message: "User registered! Check your email to verify.",
     token,
     user: newUser,
   });
@@ -270,7 +251,7 @@ export const resetpassword = asyncHandler(async (req, res) => {
       text: `Click here to reset your password: ${resetLink}`,
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
     };
-    await sgMail.send(msg);
+    await emailService.send(msg);
     res.status(200).json({
       success: true,
       message: "Password reset email sent. Please check your inbox.",
@@ -314,9 +295,9 @@ export const userPasswordResetAfterClick = asyncHandler(async (req,res)=>{
 });
 
 export const verifyAccount = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const id = req.user.id;
   try{
-    const result = await query(`SELECT * FROM users WHERE email = $1`, [email.toLowerCase()]);
+    const result = await query(`SELECT * FROM users WHERE id = $1`, [id]);
     const user = result.rows[0];
     if (!user) {
       return res.status(404).json({
@@ -328,12 +309,12 @@ export const verifyAccount = asyncHandler(async (req, res) => {
     const verificationLink = `http://localhost:3000/verify?token=${verificationToken}`;
     const msg = {
       to: user.email,
-      from: 'syedathae23m@gmail.com',
-      subject: 'Verify Your Email for SkillBolt',
-      text: `Click here to verify your email: ${verificationLink}`,
-      html: `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`,
+      from: `"LUXE Support" <${process.env.EMAIL_USER}>`,
+      subject: 'Verify your LUXE account',
+      text: `Hi ${user.firstname}, please verify your email address by clicking here: ${verificationLink}`,
+      html: getVerificationEmailTemplate(user.firstname, verificationLink),
     };
-    await sgMail.send(msg);
+    await emailService.send(msg);
     res.status(200).json({
       success: true,
       message: "Verification email sent. Please check your inbox.",

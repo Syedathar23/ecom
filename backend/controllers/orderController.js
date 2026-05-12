@@ -1,25 +1,42 @@
 import { pool, query } from '../db.js';
+import { estimateDeliveryTime } from '../utils/deliveryEstimator.js';
 
 export const createOrder = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { items, totalAmount } = req.body; 
+    const { items, totalAmount, addressId, paymentMethod, paymentStatus } = req.body; 
     
+    // Fetch address details for delivery estimation
+    const addressRes = await client.query('SELECT * FROM addresses WHERE id = $1', [addressId]);
+    const address = addressRes.rows[0];
+    
+    const estimatedDelivery = estimateDeliveryTime(address?.state, address?.city);
+
     await client.query('BEGIN');
     
     const orderRes = await client.query(
-      `INSERT INTO orders (userid, totalamount, status, createdat, updatedat) 
-       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *`,
-      [req.user.id, totalAmount, "Processing"]
+      `INSERT INTO orders (userid, totalamount, status, addressid, paymentmethod, paymentstatus, estimated_delivery, createdat, updatedat) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) RETURNING *`,
+      [req.user.id, totalAmount, "Processing", addressId, paymentMethod || 'Card', paymentStatus || 'Pending', estimatedDelivery]
     );
     const order = orderRes.rows[0];
 
     const orderItems = [];
+    console.log('Items received:', JSON.stringify(items, null, 2));
+    
     for (const item of items) {
+      console.log('Processing item:', item);
+      const productId = item.productId || item.id;
+      
+      if (!productId) {
+        console.error('Missing Product ID for item:', item);
+        throw new Error(`Product ID is missing for item: ${item.name || 'Unknown'}`);
+      }
+
       const itemRes = await client.query(
         `INSERT INTO order_items (orderid, productid, quantity, price) 
          VALUES ($1, $2, $3, $4) RETURNING *`,
-        [order.id, item.productId, item.quantity, item.price]
+        [order.id, parseInt(productId), item.quantity, item.price]
       );
       orderItems.push(itemRes.rows[0]);
     }
