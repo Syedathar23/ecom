@@ -11,12 +11,19 @@ export default function AuthPage() {
   const [userType, setUserType] = useState('user');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const addToast = useToastStore((s) => s.addToast);
-  const { login } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/profile');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if ((!isLogin && !formData.name) || !formData.email || !formData.password) {
       addToast("Please fill in all required fields", "error");
@@ -24,21 +31,32 @@ export default function AuthPage() {
     }
     
     if (isLogin) {
-      if (userType === 'admin') {
-        const success = login(formData.email, formData.password);
-        if (success) {
-          addToast("Admin signed in successfully!", "success");
-          navigate('/admin/dashboard');
-        } else {
-          addToast("Invalid admin credentials", "error");
-        }
-      } else {
+      const result = await login(formData.email, formData.password);
+      if (result.success) {
         addToast("Signed in successfully!", "success");
-        navigate('/');
+        navigate('/profile');
+      } else {
+        addToast(result.message, "error");
       }
     } else {
-      addToast("Account created successfully!", "success");
-      navigate('/');
+      // Split name into firstName and lastName
+      const nameParts = formData.name.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const result = await register({
+        email: formData.email,
+        password: formData.password,
+        firstName,
+        lastName
+      });
+
+      if (result.success) {
+        addToast("Account created successfully!", "success");
+        navigate('/profile');
+      } else {
+        addToast(result.message, "error");
+      }
     }
   };
 

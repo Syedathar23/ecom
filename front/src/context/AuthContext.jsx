@@ -1,42 +1,96 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
+export const useAuth = () => useContext(AuthContext);
+
 export const AuthProvider = ({ children }) => {
-  const [admin, setAdmin] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const storedAdmin = localStorage.getItem('admin');
-    if (storedAdmin) {
-      setAdmin(JSON.parse(storedAdmin));
-    }
-    setLoading(false);
-  }, []);
+  const API_URL = 'http://localhost:5000/api/users';
 
-  const login = (email, password) => {
-    // Hardcoded for demo
-    if (email === 'admin@fitstore.com' && password === 'admin123') {
-      const adminData = { email, role: 'admin' };
-      setAdmin(adminData);
-      localStorage.setItem('admin', JSON.stringify(adminData));
-      return true;
+  // Configure axios to include credentials (cookies) if needed
+  axios.defaults.withCredentials = true;
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    return false;
+
+    try {
+      // Use the 'test' endpoint which verifies the token via middleware
+      const response = await axios.get(`${API_URL}/test`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('token');
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/login`, { email, password });
+      if (response.data.success) {
+        const { token, user } = response.data;
+        localStorage.setItem('token', token);
+        setUser(user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
+      };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const response = await axios.post(`${API_URL}/register`, userData);
+      if (response.data.success) {
+        const { token, user } = response.data;
+        localStorage.setItem('token', token);
+        setUser(user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Registration failed' 
+      };
+    }
   };
 
   const logout = () => {
-    setAdmin(null);
-    localStorage.removeItem('admin');
+    localStorage.removeItem('token');
+    setUser(null);
+    setIsAuthenticated(false);
   };
 
-  if (loading) return null;
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ admin, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout, register, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);

@@ -4,7 +4,6 @@ import { forgotPassword } from '../controllers/users/forgotPassword.js';
 import { userLogin } from '../controllers/users/userController.js';
 import { testController } from '../controllers/users/userController.js';
 import {userAuth} from '../middleware/auth/Auth.js';
-import { verify } from 'crypto';
 const route = express.Router();
 
 route.post("/register",registerUser);

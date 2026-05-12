@@ -1,47 +1,20 @@
-import express from "express";
 import asyncHandler from "express-async-handler";
-import {prisma} from "../../prisma/utils.js"; 
+import { query } from "../../db.js"; 
 
 export const createProduct = asyncHandler(async(req,res)=>{
   const {
-    title,
-    description,
-    description2,
-    description3,
-    descriptionHero,
-    adcopyFb1,
-    adcopyFb2,
-    adcopy1,
-    adcopy2,
-    adcopy3,
-    creative1,
-    creative2,
-    free,
-    priceOfGoods,
-    sellPrice,
-    aliexpressLink,
-    cjdropshippingLink,
-    competitorShop,
-    productAge,
-    popullarity,
-    competitivness,
-    bestPlatform,
-    category,
-    keywords,
-    image1,
-    image2,
-    image3,
-    image4,
-    image5,
-    image6,
-    image7,
-    image8,
+    title, description, description2, description3, descriptionHero,
+    adcopyFb1, adcopyFb2, adcopy1, adcopy2, adcopy3,
+    free, priceOfGoods, sellPrice, aliexpressLink, cjdropshippingLink,
+    competitorShop, productAge, popularity, competitiveness, bestPlatform,
+    category, keywords
   } = req.body;
+  
   try {
-    const creativeGot =  [];
+    const creativeGot = [];
     const imagesGot = [];
     req.images.map((creative)=>{
-      if(creative.endsWith(".mov")||creative.endsWith(".mov")){
+      if(creative.endsWith(".mov")||creative.endsWith(".mp4")){
         creativeGot.push(creative);
       }
     })
@@ -50,25 +23,33 @@ export const createProduct = asyncHandler(async(req,res)=>{
         imagesGot.push(image);
       }
     })
-    const newProduct = await prisma.product.create({
-       data:{
-        ...req.body,
-        creative1:creativeGot[0],
-        creative2:creativeGot[1],
-        image1:imagesGot[0],
-        image2:imagesGot[1],
-        image3:imagesGot[2],
-        image4:imagesGot[3],
-        image5:imagesGot[4],
-        image6:imagesGot[5],
-        image7:imagesGot[6],
-        image8:imagesGot[7],
-        userId:req.user.id,
-       }
-        
-    });
 
-    res.status(200).json(newProduct);
+    const result = await query(
+      `INSERT INTO products (
+        title, description, description2, description3, descriptionhero,
+        adcopyfb1, adcopyfb2, adcopy1, adcopy2, adcopy3,
+        creative1, creative2,
+        free, priceofgoods, sellprice, aliexpresslink, cjdropshippinglink,
+        competitorshop, productage, popularity, competitiveness, bestplatform,
+        category, keywords,
+        image1, image2, image3, image4, image5, image6, image7, image8,
+        userid, createdat, updatedat
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, NOW(), NOW()
+      ) RETURNING *`,
+      [
+        title, description, description2, description3, descriptionHero,
+        adcopyFb1, adcopyFb2, adcopy1, adcopy2, adcopy3,
+        creativeGot[0], creativeGot[1],
+        free, priceOfGoods, sellPrice, aliexpressLink, cjdropshippingLink,
+        competitorShop, productAge, popularity, competitiveness, bestPlatform,
+        category, keywords,
+        imagesGot[0], imagesGot[1], imagesGot[2], imagesGot[3], imagesGot[4], imagesGot[5], imagesGot[6], imagesGot[7],
+        req.user.id
+      ]
+    );
+
+    res.status(200).json(result.rows[0]);
     
   } catch (error) {
      return res.status(403).json({
@@ -79,31 +60,25 @@ export const createProduct = asyncHandler(async(req,res)=>{
 });
 
 export const fetchAllProducts = asyncHandler(async (req, res) => {
-  const allProducts = await prisma.product.findMany({
-    include: {
-      user: true,   // equivalent of populate("user")
-    },
-    orderBy: {
-      createdAt: "desc",   // equivalent of sort({ createdAt: -1 })
-    },
-  });
-
-  res.status(200).json(allProducts);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     ORDER BY p.createdat DESC`
+  );
+  res.status(200).json(result.rows);
 });
 
 export const fetchFreeproducts = asyncHandler(async(req,res)=>{
   try {
-    const fetchFreeproducts = await prisma.product.findMany({
-      where:{free:true},
-      include: {
-      user: true,   // equivalent of populate("user")
-    },
-    orderBy: {
-      createdAt: "desc",   // equivalent of sort({ createdAt: -1 })
-    },
-  });
-  res.status(200).json(fetchFreeproducts);
-
+    const result = await query(
+      `SELECT p.*, row_to_json(u.*) as user 
+       FROM products p 
+       LEFT JOIN users u ON p.userid = u.id 
+       WHERE p.free = true 
+       ORDER BY p.createdat DESC`
+    );
+    res.status(200).json(result.rows);
   } catch (error) {
     return res.status(403).json({
     success: false,
@@ -112,133 +87,107 @@ export const fetchFreeproducts = asyncHandler(async(req,res)=>{
   }
 });
 
-
 export const fetchPaidProd = asyncHandler(async (req, res) => {
-  const products = await prisma.product.findMany({
-    where: {
-      free: false,
-    },
-    include: {
-      user: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  res.status(200).json(products);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.free = false 
+     ORDER BY p.createdat DESC`
+  );
+  res.status(200).json(result.rows);
 });
 
 export const fetchTiktokProd = asyncHandler(async (req, res) => {
-  const products = await prisma.product.findMany({
-    where: {
-      free: false,
-      bestPlatform: "Tiktok",
-    },
-    include: {
-      user: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  res.status(200).json(products);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.free = false AND p.bestplatform = 'Tiktok'
+     ORDER BY p.createdat DESC`
+  );
+  res.status(200).json(result.rows);
 });
 
 export const fetchGoogleProd = asyncHandler(async (req, res) => {
-  const products = await prisma.product.findMany({
-    where: {
-      free: false,
-      bestPlatform: "Google",
-    },
-    include: {
-      user: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  res.status(200).json(products);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.free = false AND p.bestplatform = 'Google'
+     ORDER BY p.createdat DESC`
+  );
+  res.status(200).json(result.rows);
 });
 
 export const fetchFacebookProd = asyncHandler(async (req, res) => {
-  const products = await prisma.product.findMany({
-    where: {
-      free: false,
-      bestPlatform: "Facebook",
-    },
-    include: {
-      user: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  res.status(200).json(products);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.free = false AND p.bestplatform = 'Facebook'
+     ORDER BY p.createdat DESC`
+  );
+  res.status(200).json(result.rows);
 });
 
 export const fetchSingleProd = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      user: true,
-    },
-  });
-
-  res.status(200).json(product);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.id = $1`,
+    [id]
+  );
+  res.status(200).json(result.rows[0]);
 });
 
 export const fetchSingleProdFree = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const product = await prisma.product.findFirst({
-    where: {
-      id,
-      free: true,
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  res.status(200).json(product);
+  const result = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.id = $1 AND p.free = true`,
+    [id]
+  );
+  res.status(200).json(result.rows[0]);
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const user = req.user;
 
-  const updatedProduct = await prisma.product.update({
-    where: { id },
-    data: {
-      ...req.body,
-      userId: user?.id,   // important: use userId not user
-    },
-    include: {
-      user: true,
-    },
-  });
+  const fields = Object.keys(req.body).filter(key => key !== 'id');
+  const values = fields.map(key => req.body[key]);
+  values.push(user?.id);
+  values.push(id);
+  
+  const setClause = fields.map((field, index) => `"${field.toLowerCase()}" = $${index + 1}`).join(', ');
+  const queryStr = `UPDATE products SET ${setClause}, userid = $${fields.length + 1}, updatedat = NOW() WHERE id = $${fields.length + 2} RETURNING *`;
 
-  res.status(200).json(updatedProduct);
+  const result = await query(queryStr, values);
+  
+  // Fetch with user info
+  const finalResult = await query(
+    `SELECT p.*, row_to_json(u.*) as user 
+     FROM products p 
+     LEFT JOIN users u ON p.userid = u.id 
+     WHERE p.id = $1`,
+    [id]
+  );
+
+  res.status(200).json(finalResult.rows[0]);
 });
 
 export const deleteProductSingle = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const deletedProduct = await prisma.product.delete({
-    where: { id },
-  });
-
-  res.status(200).json(deletedProduct);
+  const result = await query(`DELETE FROM products WHERE id = $1 RETURNING *`, [id]);
+  res.status(200).json(result.rows[0]);
 });
 
 export const deleteAllProducts = asyncHandler(async (req, res) => {
-  const result = await prisma.product.deleteMany({});
-
-  res.status(200).json(result);
+  const result = await query(`DELETE FROM products`);
+  res.status(200).json({ count: result.rowCount });
 });

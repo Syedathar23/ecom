@@ -14,6 +14,7 @@ import ProfilePage from "./pages/ProfilePage";
 import AddressesPage from "./pages/AddressesPage";
 
 import { AuthProvider } from "./context/AuthContext";
+import PrivateRoute from "./components/PrivateRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLogin from "./pages/admin/AdminLogin";
 import Dashboard from "./pages/admin/Dashboard";
@@ -38,9 +39,11 @@ function Layout() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/contact" element={<ContactUs />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/addresses" element={<AddressesPage />} />
+          
+          {/* Protected User Routes */}
+          <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/addresses" element={<PrivateRoute><AddressesPage /></PrivateRoute>} />
 
           {/* Admin Auth Route */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -63,10 +66,8 @@ function Layout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Layout />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <Layout />
+    </BrowserRouter>
   );
 }

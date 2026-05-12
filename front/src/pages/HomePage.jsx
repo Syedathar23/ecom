@@ -158,7 +158,7 @@ export default function HomePage() {
                 to="/shop"
                 className={`group relative block aspect-[4/3] rounded-xl overflow-hidden bg-gradient-to-br ${cat.gradient}`}
               >
-                <img src={cat.image} alt={cat.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 group-hover:scale-110 transition-all duration-500" />
+                <img src={"https://i.pinimg.com/1200x/e6/28/11/e628111b8a41d3ccfc223cf37de34190.jpg"} alt={cat.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 group-hover:scale-110 transition-all duration-500" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
                   <h3 className="text-body-md lg:text-h3 font-bold text-white drop-shadow-lg">{cat.name}</h3>
                   <p className="text-body-sm text-white/80 mt-1">{cat.count} products</p>

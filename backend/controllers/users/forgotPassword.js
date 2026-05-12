@@ -1,6 +1,6 @@
 // forgotPasswordController.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../../prisma/utils.js";
+import { query } from "../../db.js";
 import { createPasswordResetToken } from "../../token/authtoken.js";
 import sgMail from "@sendgrid/mail";
 
@@ -9,7 +9,8 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const userResult = await query(`SELECT * FROM users WHERE email = $1`, [email]);
+  const user = userResult.rows[0];
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });

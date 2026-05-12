@@ -1,31 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Package, MapPin, LogOut, Camera, Check, Calendar, Lock, Info } from 'lucide-react';
 import useToastStore from '../store/toastStore';
+import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const addToast = useToastStore(s => s.addToast);
+  const { user, logout } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    gender: 'Prefer not to say',
+    birthday: '',
+    email: '',
+    phone: '',
+    fitnessGoal: 'General Fitness'
+  });
 
-  const initialData = {
-    firstName: 'Alex',
-    lastName: 'Rivera',
-    gender: 'Male',
-    birthday: '05/15/1990',
-    email: 'alex.rivera@example.com',
-    phone: '+1 (555) 123-4567',
-    fitnessGoal: 'Muscle Gain'
-  };
-
-  const [formData, setFormData] = useState(initialData);
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstname || '',
+        lastName: user.lastname || '',
+        gender: user.gender || 'Prefer not to say',
+        birthday: user.birthday || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        fitnessGoal: user.fitnessgoal || 'General Fitness'
+      });
+    }
+  }, [user]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSave = (e) => {
     e.preventDefault();
     setIsLoading(true);
+    // In a real app, you would call an API here to update the user in the DB
     setTimeout(() => {
       setIsLoading(false);
       addToast('Profile updated successfully', 'success');
@@ -34,13 +48,24 @@ export default function ProfilePage() {
 
   const handleDiscard = () => {
     if (window.confirm("Are you sure you want to discard your changes?")) {
-      setFormData(initialData);
+      if (user) {
+        setFormData({
+          firstName: user.firstname || '',
+          lastName: user.lastname || '',
+          gender: user.gender || 'Prefer not to say',
+          birthday: user.birthday || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          fitnessGoal: user.fitnessgoal || 'General Fitness'
+        });
+      }
     }
   };
 
   const handleLogout = () => {
+    logout();
     addToast('Logged out successfully', 'success');
-    navigate('/');
+    navigate('/auth');
   };
 
   return (
@@ -55,7 +80,7 @@ export default function ProfilePage() {
                 <User size={24} />
               </div>
               <div>
-                <h3 className="text-body-lg font-bold text-[#191c1d]">{initialData.firstName} {initialData.lastName}</h3>
+                <h3 className="text-body-lg font-bold text-[#191c1d]">{formData.firstName} {formData.lastName}</h3>
                 <p className="text-[12px] text-[#777587]">Premium Member</p>
               </div>
             </div>

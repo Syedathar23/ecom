@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, Heart, User, Menu, X, ChevronDown } from "lucide-react";
+import { Search, ShoppingBag, Heart, User, Menu, X, ChevronDown, LogOut, Package, MapPin } from "lucide-react";
 import useCartStore from "../store/cartStore";
 import useWishlistStore from "../store/wishlistStore";
+import { useAuth } from "../context/AuthContext";
 
 const navStructure = [
   {
@@ -88,6 +89,7 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
   const wishlistCount = useWishlistStore((s) => s.items.length);
 
@@ -148,9 +150,44 @@ export default function Header() {
               <span className="absolute top-0 right-0 min-w-[18px] min-h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">{wishlistCount}</span>
             )}
           </Link>
-          <Link to="/auth" className="p-2 rounded-lg hover:bg-surface-dim transition-colors text-on-surface">
-            <User size={22} />
-          </Link>
+          
+          {user ? (
+            <div className="relative group">
+              <button className="p-2 rounded-lg hover:bg-surface-dim transition-colors relative text-on-surface flex items-center gap-2">
+                {user.profilePhoto ? (
+                  <img src={user.profilePhoto} alt="Profile" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[12px] font-bold">
+                    {user.firstname?.charAt(0) || <User size={16} />}
+                  </div>
+                )}
+              </button>
+              <div className="absolute right-0 top-full hidden group-hover:block bg-white shadow-lg border border-outline-variant/20 rounded-xl w-48 py-2 z-50">
+                <div className="px-4 py-2 border-b border-outline-variant/20 mb-1">
+                  <p className="text-body-sm font-bold truncate">{user.firstname} {user.lastname}</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">{user.email}</p>
+                </div>
+                <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-body-sm text-on-surface hover:bg-surface-dim">
+                  <User size={16} /> My Profile
+                </Link>
+                <Link to="/orders" className="flex items-center gap-2 px-4 py-2 text-body-sm text-on-surface hover:bg-surface-dim">
+                  <Package size={16} /> Orders
+                </Link>
+                <Link to="/addresses" className="flex items-center gap-2 px-4 py-2 text-body-sm text-on-surface hover:bg-surface-dim">
+                  <MapPin size={16} /> Addresses
+                </Link>
+                <div className="border-t border-outline-variant/20 my-1"></div>
+                <button onClick={logout} className="flex items-center gap-2 w-full text-left px-4 py-2 text-body-sm text-error hover:bg-error-container/30">
+                  <LogOut size={16} /> Logout
+                </button>
+              </div>
+            </div>
+          ) : (
+            <Link to="/auth" className="p-2 rounded-lg hover:bg-surface-dim transition-colors text-on-surface">
+              <User size={22} />
+            </Link>
+          )}
+
           <Link to="/checkout" className="p-2 rounded-lg hover:bg-surface-dim transition-colors relative text-on-surface">
             <ShoppingBag size={22} />
             {cartCount > 0 && (

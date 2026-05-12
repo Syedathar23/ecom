@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import asyncHandler from "express-async-handler";
-import { prisma } from "../../prisma/utils.js";
+import { query } from "../../db.js";
 
 export const userAuth = asyncHandler(async (req, res, next) => {
   let token;
@@ -24,9 +24,8 @@ export const userAuth = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     //  Find user
-    const userFound = await prisma.user.findUnique({
-      where: { id: decoded.id },
-    });
+    const userResult = await query(`SELECT * FROM users WHERE id = $1`, [decoded.id]);
+    const userFound = userResult.rows[0];
 
     if (!userFound) {
       return res.status(401).json({
