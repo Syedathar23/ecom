@@ -1,57 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Package, MapPin, LogOut, Home, Briefcase, Plane, Edit2, Trash2, Plus, X } from 'lucide-react';
 import useToastStore from '../store/toastStore';
+import { addressApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function AddressesPage() {
   const navigate = useNavigate();
   const addToast = useToastStore(s => s.addToast);
+  const { user } = useAuth();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [addresses, setAddresses] = useState([]);
   const [formData, setFormData] = useState({
-    type: 'Home',
-    label: '',
-    fullName: '',
-    street: '',
-    suite: '',
+    address_type: 'home',
+    full_name: '',
+    address_line_1: '',
+    address_line_2: '',
     city: '',
     state: '',
-    zip: '',
-    country: 'United States',
+    pincode: '',
     phone: '',
-    isDefault: false
+    is_default: false
   });
 
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      type: 'Home',
-      label: 'Main Residence',
-      fullName: 'Alexander Sterling',
-      street: '742 Evergreen Terrace',
-      suite: 'Apt 2B',
-      city: 'Seattle',
-      state: 'WA',
-      zip: '98101',
-      country: 'United States',
-      phone: '+1 (555) 012-3456',
-      isDefault: true
-    },
-    {
-      id: 2,
-      type: 'Gym/Studio',
-      label: 'Studio Office',
-      fullName: 'Alexander Sterling',
-      street: '100 Fitness Ave',
-      suite: 'Suite 405, North Wing',
-      city: 'Seattle',
-      state: 'WA',
-      zip: '98104',
-      country: 'United States',
-      phone: '+1 (555) 987-6543',
-      isDefault: false
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const fetchAddresses = async () => {
+    try {
+      const res = await addressApi.getAddresses();
+      setAddresses(res.data.data);
+    } catch (err) {
+      addToast('Failed to load addresses', 'error');
     }
-  ]);
+  };
 
   const handleLogout = () => {
     addToast('Logged out successfully', 'success');
@@ -59,41 +43,63 @@ export default function AddressesPage() {
   };
 
   const getIcon = (type) => {
-    if (type === 'Home') return <Home size={20} />;
-    if (type === 'Office') return <Briefcase size={20} />;
-    if (type === 'Gym/Studio') return <Briefcase size={20} />;
+    if (type === 'home') return <Home size={20} />;
+    if (type === 'work') return <Briefcase size={20} />;
     return <Plane size={20} />;
   };
 
-  const handleDelete = (id, isDefault) => {
+  const handleDelete = async (id, isDefault) => {
     if (isDefault) {
       addToast('Cannot delete your default address.', 'error');
       return;
     }
     if (window.confirm("Are you sure you want to delete this address?")) {
-      setAddresses(addresses.filter(a => a.id !== id));
-      addToast('Address deleted successfully', 'success');
+      try {
+        await addressApi.deleteAddress(id);
+        setAddresses(addresses.filter(a => a.id !== id));
+        addToast('Address deleted successfully', 'success');
+      } catch (err) {
+        addToast('Failed to delete address', 'error');
+      }
     }
   };
 
-  const handleSetDefault = (id) => {
-    setAddresses(addresses.map(a => ({
-      ...a,
-      isDefault: a.id === id
-    })));
-    addToast('Default address updated', 'success');
+  const handleSetDefault = async (id) => {
+    try {
+      await addressApi.setDefault(id);
+      setAddresses(addresses.map(a => ({
+        ...a,
+        is_default: a.id === id
+      })));
+      addToast('Default address updated', 'success');
+    } catch (err) {
+      addToast('Failed to set default address', 'error');
+    }
   };
 
-  const handleSaveAddress = (e) => {
+  const handleSaveAddress = async (e) => {
     e.preventDefault();
-    const newAddress = { ...formData, id: Date.now() };
-    if (newAddress.isDefault) {
-      setAddresses([...addresses.map(a => ({ ...a, isDefault: false })), newAddress]);
-    } else {
-      setAddresses([...addresses, newAddress]);
+    try {
+      const res = await addressApi.addAddress(formData);
+      if (res.data.success) {
+        fetchAddresses();
+        setIsModalOpen(false);
+        setFormData({
+          address_type: 'home',
+          full_name: '',
+          address_line_1: '',
+          address_line_2: '',
+          city: '',
+          state: '',
+          pincode: '',
+          phone: '',
+          is_default: false
+        });
+        addToast('Address saved successfully', 'success');
+      }
+    } catch (err) {
+      addToast('Failed to save address', 'error');
     }
-    setIsModalOpen(false);
-    addToast('Address saved successfully', 'success');
   };
 
   return (
@@ -147,22 +153,21 @@ export default function AddressesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
               {addresses.map(addr => (
                 <div key={addr.id} className="bg-white border border-[#c7c4d8]/40 rounded-[0.75rem] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col h-full relative">
-                  {addr.isDefault && (
+                  {addr.is_default && (
                     <div className="absolute top-6 right-6 bg-[#e0e7ff] text-[#4f46e5] text-[12px] font-bold px-3 py-1 rounded-full">
                       DEFAULT
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-[#464555] font-bold mb-4">
-                    {getIcon(addr.type)}
-                    <span className="text-[16px]">{addr.label}</span>
+                    {getIcon(addr.address_type)}
+                    <span className="text-[16px] uppercase">{addr.address_type}</span>
                   </div>
                   
                   <div className="flex-1 space-y-1 text-[16px] text-[#191c1d]">
-                    <p className="font-bold">{addr.fullName}</p>
-                    <p>{addr.street}</p>
-                    {addr.suite && <p>{addr.suite}</p>}
-                    <p>{addr.city}, {addr.state} {addr.zip}</p>
-                    <p>{addr.country}</p>
+                    <p className="font-bold">{addr.full_name}</p>
+                    <p>{addr.address_line_1}</p>
+                    {addr.address_line_2 && <p>{addr.address_line_2}</p>}
+                    <p>{addr.city}, {addr.state} {addr.pincode}</p>
                     <p className="pt-2 text-[#464555]">{addr.phone}</p>
                   </div>
 
@@ -171,11 +176,11 @@ export default function AddressesPage() {
                       <button className="text-[#4f46e5] font-bold text-[14px] flex items-center gap-1 hover:underline">
                         <Edit2 size={14} /> Edit
                       </button>
-                      <button onClick={() => handleDelete(addr.id, addr.isDefault)} className="text-[#6b7280] font-bold text-[14px] flex items-center gap-1 hover:text-red-600 transition-colors">
+                      <button onClick={() => handleDelete(addr.id, addr.is_default)} className="text-[#6b7280] font-bold text-[14px] flex items-center gap-1 hover:text-red-600 transition-colors">
                         <Trash2 size={14} /> Delete
                       </button>
                     </div>
-                    {!addr.isDefault && (
+                    {!addr.is_default && (
                       <button onClick={() => handleSetDefault(addr.id)} className="text-[#4f46e5] font-bold text-[14px] hover:underline">
                         Set as Default
                       </button>
@@ -211,32 +216,26 @@ export default function AddressesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Address Type</label>
-                  <select name="type" required value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none">
-                    <option>Home</option>
-                    <option>Gym/Studio</option>
-                    <option>Office</option>
-                    <option>Other</option>
+                  <select name="address_type" required value={formData.address_type} onChange={(e) => setFormData({...formData, address_type: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none">
+                    <option value="home">Home</option>
+                    <option value="work">Work</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Address Label</label>
-                  <input required type="text" placeholder="e.g. Main Residence" value={formData.label} onChange={(e) => setFormData({...formData, label: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
+                  <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Full Name</label>
+                  <input required type="text" placeholder="e.g. Alexander Sterling" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
                 </div>
               </div>
               
-              <div>
-                <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Full Name</label>
-                <input required type="text" value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Street Address</label>
-                  <input required type="text" value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
+                  <input required type="text" value={formData.address_line_1} onChange={(e) => setFormData({...formData, address_line_1: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
                 </div>
                 <div>
                   <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Apartment/Suite (Optional)</label>
-                  <input type="text" value={formData.suite} onChange={(e) => setFormData({...formData, suite: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
+                  <input type="text" value={formData.address_line_2} onChange={(e) => setFormData({...formData, address_line_2: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
                 </div>
               </div>
 
@@ -251,30 +250,22 @@ export default function AddressesPage() {
                 </div>
                 <div>
                   <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">ZIP/Postal Code</label>
-                  <input required type="text" value={formData.zip} onChange={(e) => setFormData({...formData, zip: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
+                  <input required type="text" value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Country</label>
-                  <select required value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none">
-                    <option>United States</option>
-                    <option>Canada</option>
-                    <option>United Kingdom</option>
-                    <option>Australia</option>
-                  </select>
-                </div>
-                <div>
                   <label className="text-[12px] uppercase text-[#777587] font-bold mb-1.5 block">Phone Number</label>
                   <input required type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="+1 (555) 000-0000" className="w-full bg-[#f3f4f5] border border-[#c7c4d8]/30 rounded-[0.5rem] px-4 py-3 text-[#191c1d] focus:ring-2 focus:ring-[#4f46e5]/50 outline-none" />
                 </div>
+                <div className="flex items-end pb-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={formData.is_default} onChange={(e) => setFormData({...formData, is_default: e.target.checked})} className="w-5 h-5 rounded border-[#c7c4d8] text-[#4f46e5] focus:ring-[#4f46e5]" />
+                    <span className="text-[16px] text-[#191c1d] font-bold">Set as default address</span>
+                  </label>
+                </div>
               </div>
-
-              <label className="flex items-center gap-3 cursor-pointer py-2">
-                <input type="checkbox" checked={formData.isDefault} onChange={(e) => setFormData({...formData, isDefault: e.target.checked})} className="w-5 h-5 rounded border-[#c7c4d8] text-[#4f46e5] focus:ring-[#4f46e5]" />
-                <span className="text-[16px] text-[#191c1d] font-bold">Set as default address</span>
-              </label>
 
               <div className="flex justify-end gap-4 pt-6 border-t border-[#c7c4d8]/30">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="bg-[#f3f4f5] hover:bg-[#e2e4e6] text-[#191c1d] font-bold py-3 px-6 rounded-[0.5rem] transition-colors border border-[#c7c4d8]/40">

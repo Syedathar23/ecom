@@ -1,13 +1,69 @@
-import React, { useState } from 'react';
-import { Search, Filter, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Eye, Loader2, AlertCircle } from 'lucide-react';
+import axios from 'axios';
 
 export default function OrderManagement() {
-  const [orders] = useState([
-    { id: '#1001', customer: 'John Doe', date: '05/05/2026', products: '3 items', total: '₹5,999', status: 'Pending' },
-    { id: '#1002', customer: 'Jane Smith', date: '04/05/2026', products: '1 item', total: '₹2,499', status: 'Processing' },
-    { id: '#1003', customer: 'Alex Johnson', date: '02/05/2026', products: '2 items', total: '₹8,999', status: 'Shipped' },
-    { id: '#1004', customer: 'Sarah Williams', date: '01/05/2026', products: '5 items', total: '₹12,499', status: 'Delivered' },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchOrders = async () => {
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get(`${BASE_URL}/admin/orders`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setOrders(response.data.orders);
+      }
+    } catch (err) {
+      setError('Failed to fetch orders');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleStatusUpdate = async (id, newStatus) => {
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.put(`${BASE_URL}/admin/orders/${id}/status`, 
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success) {
+        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      }
+    } catch (err) {
+      alert('Failed to update status');
+      console.error(err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin text-primary" size={48} />
+        <p className="text-body-md text-on-surface-variant font-medium">Loading Orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-error-container text-error p-6 rounded-xl border border-error/20 flex items-center gap-4">
+        <AlertCircle size={24} />
+        <p className="font-semibold">{error}</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
@@ -48,20 +104,27 @@ export default function OrderManagement() {
             <tbody className="divide-y divide-outline-variant/20 text-body-sm">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-surface-dim/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-on-surface">{order.id}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{order.customer}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{order.date}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{order.products}</td>
-                  <td className="px-6 py-4 font-medium text-on-surface">{order.total}</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">#{order.id}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">{order.firstname} {order.lastname}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">{new Date(order.createdat).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">Order</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">₹{parseFloat(order.totalamount).toLocaleString()}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
-                      order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'Processing' ? 'bg-indigo-100 text-indigo-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {order.status}
-                    </span>
+                    <select 
+                      value={order.status}
+                      onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border-none focus:ring-1 focus:ring-primary ${
+                        order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                        order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
+                        order.status === 'Processing' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button className="text-primary hover:text-primary-dark p-1.5 rounded bg-primary/10 transition-colors" title="View Order">
@@ -70,6 +133,7 @@ export default function OrderManagement() {
                   </td>
                 </tr>
               ))}
+
             </tbody>
           </table>
         </div>

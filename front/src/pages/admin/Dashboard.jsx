@@ -1,20 +1,61 @@
-import React from 'react';
-import { TrendingUp, Users, Package, AlertCircle, IndianRupee } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, Users, Package, AlertCircle, IndianRupee, Loader2 } from 'lucide-react';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await axios.get(`${API_BASE_URL}/admin/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setData(response.data.stats);
+        }
+      } catch (err) {
+        setError('Failed to fetch dashboard data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin text-primary" size={48} />
+        <p className="text-body-md text-on-surface-variant font-medium">Loading Dashboard Statistics...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-error-container text-error p-6 rounded-xl border border-error/20 flex items-center gap-4">
+        <AlertCircle size={24} />
+        <p className="font-semibold">{error}</p>
+      </div>
+    );
+  }
+
   const stats = [
-    { title: 'Total Sales', value: '₹45,231', trend: '+12.5%', icon: IndianRupee, color: 'text-primary', bg: 'bg-primary/10' },
-    { title: 'Total Orders', value: '342', trend: '+8.2%', icon: Package, color: 'text-success', bg: 'bg-success/10' },
-    { title: 'Products', value: '1,204', trend: '+2.1%', icon: Package, color: 'text-secondary', bg: 'bg-secondary/10' },
-    { title: 'Low Stock', value: '14', trend: '-3.4%', icon: AlertCircle, color: 'text-error', bg: 'bg-error-container' },
+    { title: 'Total Revenue', value: `₹${data.totalRevenue.toLocaleString()}`, trend: '+0%', icon: IndianRupee, color: 'text-primary', bg: 'bg-primary/10' },
+    { title: 'Total Orders', value: data.totalOrders, trend: '+0%', icon: Package, color: 'text-success', bg: 'bg-success/10' },
+    { title: 'Total Products', value: data.totalProducts, trend: '+0%', icon: Package, color: 'text-secondary', bg: 'bg-secondary/10' },
+    { title: 'Total Users', value: data.totalUsers, trend: '+0%', icon: Users, color: 'text-info', bg: 'bg-info/10' },
   ];
 
-  const recentOrders = [
-    { id: '#1001', customer: 'John Doe', products: '3 items', total: '₹5,999', status: 'Pending' },
-    { id: '#1002', customer: 'Jane Smith', products: '1 item', total: '₹2,499', status: 'Shipped' },
-    { id: '#1003', customer: 'Alex Johnson', products: '2 items', total: '₹8,999', status: 'Delivered' },
-    { id: '#1004', customer: 'Sarah Williams', products: '5 items', total: '₹12,499', status: 'Pending' },
-  ];
+  const recentOrders = data.recentOrders;
+
 
   return (
     <div className="space-y-6">
@@ -85,10 +126,10 @@ export default function Dashboard() {
             <tbody className="divide-y divide-outline-variant/20 text-body-sm">
               {recentOrders.map((order, i) => (
                 <tr key={i} className="hover:bg-surface-dim/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-on-surface">{order.id}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{order.customer}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{order.products}</td>
-                  <td className="px-6 py-4 font-medium text-on-surface">{order.total}</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">#{order.id}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">{order.firstname} {order.lastname}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">Order</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">₹{parseFloat(order.totalamount).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                       order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
@@ -98,6 +139,7 @@ export default function Dashboard() {
                       {order.status}
                     </span>
                   </td>
+
                   <td className="px-6 py-4 text-right">
                     <button className="text-primary hover:text-primary-dark font-medium mr-3">View</button>
                     <button className="text-secondary hover:text-on-surface font-medium">Update</button>

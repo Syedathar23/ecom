@@ -1,14 +1,14 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ClipboardList, ShoppingCart, LogOut, Dumbbell } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, ShoppingCart, LogOut, Dumbbell, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout({ children }) {
-  const { logout } = useAuth();
+  const { adminLogout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    adminLogout();
     navigate('/admin/login');
   };
 
@@ -17,7 +17,9 @@ export default function AdminLayout({ children }) {
     { name: 'Products', path: '/admin/products', icon: Package },
     { name: 'Inventory', path: '/admin/inventory', icon: ClipboardList },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+    { name: 'Users', path: '/admin/users', icon: User },
   ];
+
 
   return (
     <div className="min-h-screen bg-surface-dim flex">

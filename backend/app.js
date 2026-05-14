@@ -7,6 +7,8 @@ import productroutes from "./routes/productroutes/productroutes.js";
 import cartroutes from "./routes/cartroutes.js";
 import orderroutes from "./routes/orderroutes.js";
 import addressroutes from "./routes/addressroutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+
 
 const app = express();
 
@@ -37,6 +39,8 @@ app.use("/api/products", productroutes);
 app.use("/api/cart", cartroutes);
 app.use("/api/orders", orderroutes);
 app.use("/api/user/addresses", addressroutes);
+app.use("/api/admin", adminRoutes);
+
 
 /* Server */
 

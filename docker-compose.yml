@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: luxe_backend_dev
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+    networks:
+      - luxe_network
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:5000/api
+    container_name: luxe_frontend_dev
+    ports:
+      - "5173:80" # Mapping host 5173 to container 80 (nginx)
+    depends_on:
+      - backend
+    networks:
+      - luxe_network
+
+networks:
+  luxe_network:
+    driver: bridge

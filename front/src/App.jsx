@@ -12,6 +12,7 @@ import ContactUs from "./pages/ContactUs";
 import OrdersPage from "./pages/OrdersPage";
 import ProfilePage from "./pages/ProfilePage";
 import AddressesPage from "./pages/AddressesPage";
+import VerifyPage from "./pages/VerifyPage";
 
 import { AuthProvider } from "./context/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
@@ -21,6 +22,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import ProductManagement from "./pages/admin/ProductManagement";
 import InventoryManagement from "./pages/admin/InventoryManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
+import UserManagement from "./pages/admin/UserManagement";
 
 function Layout() {
   const location = useLocation();
@@ -38,6 +40,7 @@ function Layout() {
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/verify" element={<VerifyPage />} />
           <Route path="/contact" element={<ContactUs />} />
           
           {/* Protected User Routes */}
@@ -55,6 +58,7 @@ function Layout() {
             <Route path="products" element={<ProductManagement />} />
             <Route path="inventory" element={<InventoryManagement />} />
             <Route path="orders" element={<OrderManagement />} />
+            <Route path="users" element={<UserManagement />} />
           </Route>
         </Routes>
       </main>

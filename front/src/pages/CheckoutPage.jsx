@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Lock, Trash2, Plus, Minus, ChevronRight, CreditCard, Truck, Zap, Check, MapPin, X } from "lucide-react";
 import useCartStore from "../store/cartStore";
 import useToastStore from "../store/toastStore";
-import { addressApi } from "../services/api";
+import { addressApi, orderApi } from "../services/api";
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", 
@@ -100,15 +100,38 @@ export default function CheckoutPage() {
     setStep('checkout');
   };
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (!selectedAddressId) {
       addToast("Please select a delivery address", "error");
       return;
     }
-    addToast("Payment successful! Order placed.", "success");
-    clearSelectedItems(); // Remove only purchased items
-    navigate('/');
+
+    try {
+      const orderData = {
+        items: selectedItems.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+          image: item.image
+        })),
+        totalAmount: total,
+        addressId: selectedAddressId,
+        paymentMethod: payment,
+        paymentStatus: 'Paid'
+      };
+
+      const res = await orderApi.createOrder(orderData);
+      
+      if (res.data.success) {
+        addToast("Payment successful! Order placed.", "success");
+        clearSelectedItems(); // Remove only purchased items
+        navigate('/orders');
+      }
+    } catch (error) {
+      addToast(error.response?.data?.message || "Failed to place order", "error");
+    }
   };
 
   // ---------------------------------------------------------------------------

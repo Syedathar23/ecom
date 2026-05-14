@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, Package, MapPin, LogOut, Camera, Check, Calendar, Lock, Info } from 'lucide-react';
 import useToastStore from '../store/toastStore';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -36,14 +37,33 @@ export default function ProfilePage() {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // In a real app, you would call an API here to update the user in the DB
-    setTimeout(() => {
+    try {
+      // Send the fields to the backend. The backend's updateUserField will handle the update.
+      const updateData = {
+        firstname: formData.firstName,
+        lastname: formData.lastName,
+        gender: formData.gender,
+        birthday: formData.birthday,
+        phone: formData.phone,
+        fitnessgoal: formData.fitnessGoal
+      };
+
+      const res = await axios.put('http://localhost:5000/api/users/updateuserfield', updateData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.data.success) {
+        addToast('Profile updated successfully', 'success');
+        // Optionally re-fetch user or update context
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to update profile', 'error');
+    } finally {
       setIsLoading(false);
-      addToast('Profile updated successfully', 'success');
-    }, 1000);
+    }
   };
 
   const handleDiscard = () => {
@@ -112,9 +132,44 @@ export default function ProfilePage() {
 
           {/* MAIN CONTENT (80%) */}
           <main className="lg:w-4/5 bg-[#ffffff] rounded-lg p-8 shadow-sm border border-[#c7c4d8]/20">
+            {/* Verification Banner */}
+            {user && !user.isverified && (
+              <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Info className="text-amber-500" size={20} />
+                  <div>
+                    <p className="text-body-sm font-bold text-amber-900">Email Verification Required</p>
+                    <p className="text-[12px] text-amber-700">Please verify your email to access all features.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={async () => {
+                    try {
+                      const res = await axios.post('http://localhost:5000/api/users/verifyaccount', {}, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                      });
+                      if (res.data.success) addToast("Verification email sent!", "success");
+                    } catch (err) {
+                      addToast("Failed to send verification email", "error");
+                    }
+                  }}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[12px] font-bold rounded transition-colors"
+                >
+                  Resend Email
+                </button>
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-6 border-b border-[#c7c4d8]/30">
-              <h1 className="text-[32px] font-bold text-[#191c1d]">Profile</h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-[32px] font-bold text-[#191c1d]">Profile</h1>
+                {user?.isverified && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                    <Check size={10} /> VERIFIED
+                  </span>
+                )}
+              </div>
               
               <div className="relative group cursor-pointer mt-4 sm:mt-0">
                 <div className="w-20 h-20 rounded-full bg-[#f3f4f5] flex items-center justify-center border border-[#c7c4d8]/40 overflow-hidden">

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    image: luxe_backend_prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: luxe_backend_prod
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - luxe_prod_network
+
+  frontend:
+    image: luxe_frontend_prod
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api # Use nginx proxy for production
+    container_name: luxe_frontend_prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - luxe_prod_network
+
+networks:
+  luxe_prod_network:
+    driver: bridge

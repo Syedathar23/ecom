@@ -1,59 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Package, MapPin, LogOut, ArrowRight, ShoppingBag } from 'lucide-react';
+import { User, Package, MapPin, LogOut, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
 import useToastStore from '../store/toastStore';
+import { orderApi } from '../services/api';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
   const addToast = useToastStore(s => s.addToast);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await orderApi.getUserOrders();
+      if (res.data.success) {
+        setOrders(res.data.data);
+      }
+    } catch (error) {
+      addToast("Failed to fetch orders", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     addToast('Logged out successfully', 'success');
-    navigate('/');
+    navigate('/auth');
   };
 
-  const getExpectedDelivery = (status, orderDateStr) => {
-    const date = new Date(orderDateStr);
-    if (status === 'Processing') {
-      date.setDate(date.getDate() + 7);
-      return `Expected delivery: ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-    } else if (status === 'Shipped') {
-      date.setDate(date.getDate() + 3);
-      return `Expected delivery: ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'delivered': return 'text-green-600 bg-green-50';
+      case 'processing': return 'text-amber-600 bg-amber-50';
+      case 'shipped': return 'text-blue-600 bg-blue-50';
+      case 'cancelled': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
     }
-    return null;
   };
 
-  // Mock database fetch restricted to last 12 months
-  const mockOrders = [
-    {
-      order_id: '1',
-      order_number: 'LX-9201',
-      product_image: '/images/whey-protein.webp',
-      status: 'Processing',
-      order_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      total_price: 49.99
-    },
-    {
-      order_id: '2',
-      order_number: 'LX-8542',
-      product_image: '/images/dumbbells.webp',
-      status: 'Shipped',
-      order_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      total_price: 124.00
-    },
-    {
-      order_id: '3',
-      order_number: 'LX-7103',
-      product_image: '/images/resistance-bands.webp',
-      status: 'Delivered',
-      order_date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-      total_price: 29.99
-    }
-  ];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
-  // Sort descending (newest first)
-  const sortedOrders = [...mockOrders].sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+  const sortedOrders = [...orders].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] font-manrope">
@@ -106,42 +104,40 @@ export default function OrdersPage() {
             {sortedOrders.length > 0 ? (
               <div className="space-y-[24px]">
                 {sortedOrders.map((order) => {
-                  const orderDate = new Date(order.order_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                  const expectedDelivery = getExpectedDelivery(order.status, order.order_date);
+                  const orderDate = new Date(order.createdat).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const firstItem = order.items?.[0] || {};
+                  const productImage = firstItem.product?.image || '/images/product-placeholder.webp';
                   
                   return (
                     <div 
-                      key={order.order_id} 
-                      onClick={() => navigate(`/order-details/${order.order_id}`)}
+                      key={order.id} 
+                      onClick={() => navigate(`/order-details/${order.id}`)}
                       className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 rounded-lg border border-[#c7c4d8]/40 hover:border-[#4f46e5]/40 hover:shadow-sm transition-all cursor-pointer group gap-6"
                     >
                       {/* Left (Image) & Middle (Info) */}
                       <div className="flex items-center gap-6 flex-1 min-w-0">
                         <div className="w-[80px] h-[80px] bg-[#f8f9fa] rounded-lg overflow-hidden shrink-0 border border-[#c7c4d8]/20">
-                          <img src={order.product_image} alt={order.order_number} className="w-full h-full object-cover" />
+                          <img src={productImage} alt={`Order ${order.id}`} className="w-full h-full object-cover" />
                         </div>
                         
                         <div className="flex flex-col gap-1 min-w-0">
                           <span className="text-[12px] text-[#4f46e5] uppercase font-bold tracking-wider">
-                            ORDER #{order.order_number}
+                            ORDER #LX-{order.id.toString().padStart(4, '0')}
                           </span>
                           
-                          <span className={`text-[20px] font-bold ${
-                            order.status === 'Delivered' ? 'text-[#10B981]' :
-                            order.status === 'Processing' ? 'text-orange-500' :
-                            order.status === 'Cancelled' ? 'text-[#BA1A1A]' :
-                            'text-blue-600'
-                          }`}>
-                            {order.status}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-[12px] font-bold ${getStatusColor(order.status)}`}>
+                              {order.status?.toUpperCase()}
+                            </span>
+                          </div>
                           
                           <div className="flex flex-col mt-0.5">
                             <span className="text-[14px] text-[#777587]">
                               Placed on {orderDate}
                             </span>
-                            {expectedDelivery && (
+                            {order.estimated_delivery && (
                               <span className="text-[14px] text-[#191c1d] font-semibold mt-0.5">
-                                {expectedDelivery}
+                                Estimated Delivery: {order.estimated_delivery}
                               </span>
                             )}
                           </div>
@@ -151,7 +147,7 @@ export default function OrdersPage() {
                       {/* Right (Price & Link) */}
                       <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4 sm:gap-2">
                         <span className="text-[24px] font-extrabold text-[#191c1d]">
-                          ${order.total_price.toFixed(2)}
+                          ${order.totalamount?.toFixed(2)}
                         </span>
                         <span className="text-[14px] font-bold text-[#4f46e5] flex items-center gap-1 group-hover:underline">
                           View Details <ArrowRight size={16} />
