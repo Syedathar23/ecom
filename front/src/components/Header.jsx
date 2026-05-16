@@ -9,12 +9,7 @@ import { useAuth } from "../context/AuthContext";
 const navStructure = [
   {
     label: "New Arrivals",
-    path: "/shop",
-    dropdown: [
-      { title: "Latest Products" },
-      { title: "Featured Items" },
-      { title: "Limited Edition" },
-    ]
+    path: "/shop?badge=New Arrival",
   },
   {
     label: "Men",
@@ -123,7 +118,7 @@ export default function Header() {
                       <div key={idx} className="flex flex-col min-w-[150px]">
                         <h4 className="text-label-caps text-on-surface-variant uppercase mb-3 mt-4 border-b border-outline-variant/20 pb-2">{section.title}</h4>
                         {section.items && section.items.map((item, itemIdx) => (
-                          <Link key={itemIdx} to="/shop" className="py-1.5 text-body-sm text-on-surface hover:text-primary hover:bg-primary/5 rounded px-2 -ml-2 transition-colors">
+                          <Link key={itemIdx} to={`/shop?category=${item}`} className="py-1.5 text-body-sm text-on-surface hover:text-primary hover:bg-primary/5 rounded px-2 -ml-2 transition-colors">
                             {item}
                           </Link>
                         ))}
@@ -226,15 +221,15 @@ export default function Header() {
                     {link.dropdown && <ChevronDown size={18} className="text-outline" />}
                   </div>
                   {/* Simplified Mobile Dropdown - Always visible in mobile view for simplicity, or tap to expand. Implemented as static for now */}
-                  {link.dropdown && (
-                     <div className="pl-4 pb-3 flex flex-col gap-2">
-                       {link.dropdown.map(sec => (
-                         sec.items?.map(i => (
-                           <Link key={i} to="/shop" onClick={() => setMobileOpen(false)} className="text-body-sm text-on-surface-variant py-1.5">{i}</Link>
-                         ))
-                       ))}
-                     </div>
-                  )}
+                      {link.dropdown && (
+                         <div className="pl-4 pb-3 flex flex-col gap-2">
+                           {link.dropdown.map(sec => (
+                             sec.items?.map(i => (
+                               <Link key={i} to={`/shop?category=${i}`} onClick={() => setMobileOpen(false)} className="text-body-sm text-on-surface-variant py-1.5">{i}</Link>
+                             ))
+                           ))}
+                         </div>
+                      )}
                 </div>
               ))}
               <div className="py-3 px-2 flex justify-between items-center text-body-md font-semibold text-on-surface border-t border-outline-variant/20 mt-2">

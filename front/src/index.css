@@ -22,8 +22,8 @@
   }
 
   ::selection {
-    background-color: rgba(79, 70, 229, 0.15);
-    color: #4F46E5;
+    background-color: rgba(254, 104, 1, 0.15);
+    color: #FE6801;
   }
 }
 
@@ -72,18 +72,18 @@ input[type="range"]::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #4F46E5;
+  background: #FE6801;
   cursor: pointer;
   border: 3px solid white;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 2px 6px rgba(254, 104, 1, 0.3);
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #4F46E5;
+  background: #FE6801;
   cursor: pointer;
   border: 3px solid white;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 2px 6px rgba(254, 104, 1, 0.3);
 }

@@ -1,44 +1,72 @@
 version: '3.8'
 
 services:
-  backend:
-    image: luxe_backend_prod
+  # --- API Gateway ---
+  gateway:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: luxe_backend_prod
+      context: ./services
+      dockerfile: gateway/Dockerfile
+    container_name: luxe_gateway_prod
     restart: always
     ports:
       - "5000:5000"
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    environment:
+      - GATEWAY_PORT=5000
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - ORDER_SERVICE_URL=http://order-service:5003
     networks:
       - luxe_prod_network
 
+  # --- Auth Service ---
+  auth-service:
+    build:
+      context: ./services
+      dockerfile: auth/Dockerfile
+    container_name: luxe_auth_prod
+    restart: always
+    env_file:
+      - ./services/auth/.env
+    networks:
+      - luxe_prod_network
+
+  # --- Product Service ---
+  product-service:
+    build:
+      context: ./services
+      dockerfile: products/Dockerfile
+    container_name: luxe_products_prod
+    restart: always
+    env_file:
+      - ./services/products/.env
+    networks:
+      - luxe_prod_network
+
+  # --- Order Service ---
+  order-service:
+    build:
+      context: ./services
+      dockerfile: orders/Dockerfile
+    container_name: luxe_orders_prod
+    restart: always
+    env_file:
+      - ./services/orders/.env
+    networks:
+      - luxe_prod_network
+
+  # --- Frontend ---
   frontend:
-    image: luxe_frontend_prod
     build:
       context: ./front
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=/api # Use nginx proxy for production
+        - VITE_API_URL=/api
     container_name: luxe_frontend_prod
     restart: always
     ports:
       - "80:80"
     depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - gateway
     networks:
       - luxe_prod_network
 

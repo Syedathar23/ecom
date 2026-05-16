@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Truck, ShieldCheck, RotateCcw, Headphones, Star, ShoppingBag, Eye } from "lucide-react";
-import { products, shopCategories, activities } from "../data/products";
+import { ArrowRight, Truck, ShieldCheck, RotateCcw, Headphones, Star, ShoppingBag, Eye, Heart } from "lucide-react";
+import { shopCategories, activities } from "../data/products";
+import { productApi } from "../services/api";
 import useCartStore from "../store/cartStore";
 import useWishlistStore from "../store/wishlistStore";
 import useToastStore from "../store/toastStore";
-import { Heart } from "lucide-react";
 
 const fadeUp = { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } };
 
@@ -70,8 +70,28 @@ function FeaturedCard({ product, index }) {
 }
 
 export default function HomePage() {
-  const featured = products.filter((p) => p.badge).slice(0, 4);
-  const trending = products.slice(0, 8);
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getProducts = async () => {
+      try {
+        const response = await productApi.getAll();
+        // The API returns an array directly
+        setProductsList(response.data);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getProducts();
+  }, []);
+
+  const newArrivals = productsList.filter(p => p.badge === 'New Arrival').slice(0, 4);
+  const trending = productsList.length > 0 ? productsList.slice(0, 8) : [];
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <div className="min-h-screen">
@@ -172,7 +192,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED PRODUCTS */}
+      {/* NEW ARRIVALS */}
+      {newArrivals.length > 0 && (
+        <section className="bg-surface-container/30">
+          <div className="max-w-container mx-auto px-6 py-14 lg:py-20">
+            <div className="text-center mb-10">
+              <motion.h2 {...fadeUp} viewport={{ once: true }} className="text-display text-on-surface">New Arrivals</motion.h2>
+              <motion.p {...fadeUp} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-body-lg text-on-surface-variant mt-2">Just landed in our store</motion.p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {newArrivals.map((product, i) => (
+                <FeaturedCard key={product.id} product={{
+                  ...product,
+                  name: product.title,
+                  price: product.sellprice,
+                  image: product.image1,
+                  rating: 5,
+                  reviewCount: 120,
+                  colors: []
+                }} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* TRENDING PRODUCTS */}
       <section className="bg-white">
         <div className="max-w-container mx-auto px-6 py-14 lg:py-20">
           <div className="flex items-end justify-between mb-10">
@@ -187,7 +232,15 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {trending.map((product, i) => (
-              <FeaturedCard key={product.id} product={product} index={i} />
+              <FeaturedCard key={product.id} product={{
+                ...product,
+                name: product.title,
+                price: product.sellprice,
+                image: product.image1,
+                rating: 4.5,
+                reviewCount: 450,
+                colors: []
+              }} index={i} />
             ))}
           </div>
 

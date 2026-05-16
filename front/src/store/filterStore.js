@@ -8,6 +8,9 @@ const useFilterStore = create((set) => ({
   viewMode: "grid",
   currentPage: 1,
   itemsPerPage: 8,
+  selectedBadge: null,
+
+  setSelectedBadge: (badge) => set({ selectedBadge: badge, currentPage: 1 }),
 
   toggleCategory: (category) =>
     set((state) => {
@@ -36,6 +39,7 @@ const useFilterStore = create((set) => ({
   setSortBy: (sortBy) => set({ sortBy, currentPage: 1 }),
   setViewMode: (viewMode) => set({ viewMode }),
   setCurrentPage: (currentPage) => set({ currentPage }),
+  setCategories: (categories) => set({ selectedCategories: categories, currentPage: 1 }),
 
   clearFilters: () =>
     set({

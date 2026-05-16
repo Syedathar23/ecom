@@ -8,13 +8,15 @@ export default function ProductManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    costprice: '',
     sellprice: '',
     category: 'Supplements',
     image1: '',
-    stock: 0
+    stock: 0,
   });
 
   const fetchProducts = async () => {
@@ -47,29 +49,59 @@ export default function ProductManagement() {
         });
         setProducts(products.filter(p => p.id !== id));
       } catch (err) {
-        alert('Failed to delete product');
+        const errorMsg = err.response?.data?.message || 'Failed to delete product';
+        alert(errorMsg);
         console.error(err);
       }
     }
   };
 
-  const handleAddProduct = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.post(`${API_BASE_URL}/admin/products`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        setProducts([response.data.product, ...products]);
-        setIsModalOpen(false);
-        setFormData({ title: '', description: '', sellprice: '', category: 'Supplements', image1: '', stock: 0 });
+      if (editingId) {
+        const response = await axios.put(`${API_BASE_URL}/admin/products/${editingId}`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setProducts(products.map(p => p.id === editingId ? response.data.product : p));
+        }
+      } else {
+        const response = await axios.post(`${API_BASE_URL}/admin/products`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setProducts([response.data.product, ...products]);
+        }
       }
+      setIsModalOpen(false);
+      setEditingId(null);
+      setFormData({ title: '', description: '', costprice: '', sellprice: '', category: 'Supplements', image1: '', stock: 0 });
     } catch (err) {
-      alert('Failed to add product');
+      alert('Failed to save product');
       console.error(err);
     }
   };
+
+  const handleEdit = (product) => {
+    setFormData({
+      title: product.title,
+      description: product.description,
+      costprice: product.costprice || 0,
+      sellprice: product.sellprice,
+      category: product.category,
+      image1: product.image1,
+      stock: product.stock || 0,
+    });
+    setEditingId(product.id);
+    setIsModalOpen(true);
+  };
+
+  const cost = parseFloat(formData.costprice) || 0;
+  const sell = parseFloat(formData.sellprice) || 0;
+  const profitAmount = sell - cost;
+  const profitMargin = sell > 0 ? ((profitAmount / sell) * 100).toFixed(1) : 0;
 
   if (loading) {
     return (
@@ -95,7 +127,11 @@ export default function ProductManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-h2 font-bold text-on-surface">Product Management</h1>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setFormData({ title: '', description: '', costprice: '', sellprice: '', category: 'Supplements', image1: '', stock: 0 });
+            setEditingId(null);
+            setIsModalOpen(true);
+          }}
           className="bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-5 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={18} /> Add New Product
@@ -106,8 +142,8 @@ export default function ProductManagement() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
-            <h2 className="text-h3 font-bold mb-6">Add New Product</h2>
-            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-h3 font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Title</label>
                 <input 
@@ -125,12 +161,42 @@ export default function ProductManagement() {
                 />
               </div>
               <div>
-                <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Price (₹)</label>
+                <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Cost Price (₹)</label>
                 <input 
-                  type="number" required
+                  type="number" required min="0" step="0.01"
+                  value={formData.costprice} onChange={(e) => setFormData({...formData, costprice: e.target.value})}
+                  className="w-full border border-outline-variant/40 rounded-lg px-4 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Selling Price (₹)</label>
+                <input 
+                  type="number" required min="0" step="0.01"
                   value={formData.sellprice} onChange={(e) => setFormData({...formData, sellprice: e.target.value})}
                   className="w-full border border-outline-variant/40 rounded-lg px-4 py-2"
                 />
+              </div>
+              <div>
+                <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Stock Level</label>
+                <input 
+                  type="number" required min="0"
+                  value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                  className="w-full border border-outline-variant/40 rounded-lg px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2 bg-surface-dim p-4 rounded-lg flex items-center justify-between border border-outline-variant/30">
+                <div>
+                  <p className="text-body-sm font-medium text-on-surface-variant">Estimated Profit</p>
+                  <p className={`text-h3 font-bold ${profitAmount > 0 ? 'text-success' : profitAmount < 0 ? 'text-error' : 'text-on-surface'}`}>
+                    ₹{profitAmount.toFixed(2)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-body-sm font-medium text-on-surface-variant">Profit Margin</p>
+                  <p className={`text-h3 font-bold ${profitMargin > 0 ? 'text-success' : profitMargin < 0 ? 'text-error' : 'text-on-surface'}`}>
+                    {profitMargin}%
+                  </p>
+                </div>
               </div>
               <div>
                 <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Category</label>
@@ -145,14 +211,6 @@ export default function ProductManagement() {
                 </select>
               </div>
               <div>
-                <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Stock</label>
-                <input 
-                  type="number" required
-                  value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                  className="w-full border border-outline-variant/40 rounded-lg px-4 py-2"
-                />
-              </div>
-              <div>
                 <label className="block text-label-caps text-on-surface-variant mb-1.5 uppercase">Image URL</label>
                 <input 
                   type="text" required
@@ -165,7 +223,7 @@ export default function ProductManagement() {
                   type="submit"
                   className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary-dark transition-colors"
                 >
-                  Create Product
+                  {editingId ? 'Save Changes' : 'Create Product'}
                 </button>
                 <button 
                   type="button"
@@ -207,8 +265,8 @@ export default function ProductManagement() {
               <tr className="bg-surface-dim text-label-caps text-on-surface-variant">
                 <th className="px-6 py-4 font-semibold uppercase">Product</th>
                 <th className="px-6 py-4 font-semibold uppercase">Category</th>
-                <th className="px-6 py-4 font-semibold uppercase">Price</th>
                 <th className="px-6 py-4 font-semibold uppercase">Stock</th>
+                <th className="px-6 py-4 font-semibold uppercase">Price</th>
                 <th className="px-6 py-4 font-semibold uppercase text-right">Actions</th>
               </tr>
             </thead>
@@ -224,10 +282,17 @@ export default function ProductManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-on-surface-variant">{product.category}</td>
+                  <td className="px-6 py-4">
+                    <span className={`font-semibold ${product.stock <= 5 ? 'text-error' : 'text-on-surface'}`}>
+                      {product.stock || 0}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 font-medium text-on-surface">₹{parseFloat(product.sellprice).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{product.stock || 0}</td>
                   <td className="px-6 py-4 text-right space-x-3">
-                    <button className="text-primary hover:text-primary-dark p-1.5 rounded bg-primary/10 transition-colors" title="Edit">
+                    <button 
+                      onClick={() => handleEdit(product)}
+                      className="text-primary hover:text-primary-dark p-1.5 rounded bg-primary/10 transition-colors" title="Edit"
+                    >
                       <Edit2 size={16} />
                     </button>
                     <button 

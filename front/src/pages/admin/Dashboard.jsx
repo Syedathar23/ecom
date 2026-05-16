@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Users, Package, AlertCircle, IndianRupee, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Users, Package, AlertCircle, IndianRupee, Loader2, Trophy, Medal, Eye } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 
@@ -7,6 +8,8 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [salesView, setSalesView] = useState('monthly');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -89,18 +92,86 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Placeholder for Charts */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/20 lg:col-span-2">
-          <h3 className="text-h3 font-bold text-on-surface mb-6">Sales Overview</h3>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-outline-variant/40 rounded-lg bg-surface-dim text-on-surface-variant">
-            [ Line Chart Area - Sales last 7 days ]
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-h3 font-bold text-on-surface">Sales Overview</h3>
+            <div className="flex bg-surface-dim rounded-lg p-1">
+              <button 
+                onClick={() => setSalesView('monthly')}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${salesView === 'monthly' ? 'bg-white shadow-sm text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                Monthly
+              </button>
+              <button 
+                onClick={() => setSalesView('yearly')}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${salesView === 'yearly' ? 'bg-white shadow-sm text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto max-h-[300px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-dim text-label-caps text-on-surface-variant sticky top-0">
+                  <th className="px-4 py-3 font-semibold uppercase">{salesView === 'monthly' ? 'Month' : 'Year'}</th>
+                  <th className="px-4 py-3 font-semibold uppercase text-right">Revenue</th>
+                  <th className="px-4 py-3 font-semibold uppercase text-right text-success">Profit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/20 text-body-sm">
+                {(salesView === 'monthly' ? data.monthlySales : data.yearlySales)?.map((item, i) => (
+                  <tr key={i} className="hover:bg-surface-dim/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-on-surface">{item.name}</td>
+                    <td className="px-4 py-3 text-right font-medium text-on-surface">₹{parseFloat(item.total).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-bold text-success">₹{parseFloat(item.profit || 0).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {!(salesView === 'monthly' ? data.monthlySales : data.yearlySales)?.length && (
+                  <tr>
+                    <td colSpan="2" className="px-4 py-8 text-center text-on-surface-variant">No sales data available</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/20">
-          <h3 className="text-h3 font-bold text-on-surface mb-6">Top Categories</h3>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-outline-variant/40 rounded-lg bg-surface-dim text-on-surface-variant">
-            [ Bar Chart Area ]
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/20 overflow-y-auto max-h-[400px]">
+          <h3 className="text-h3 font-bold text-on-surface mb-6">Top Sellers</h3>
+          <div className="space-y-4">
+            {data.topSellers?.map((product, i) => (
+              <div key={i} className={`flex items-center gap-4 p-3 rounded-xl border ${
+                i === 0 ? 'bg-amber-50 border-amber-200' :
+                i === 1 ? 'bg-slate-50 border-slate-200' :
+                i === 2 ? 'bg-orange-50 border-orange-200' :
+                'bg-white border-outline-variant/20'
+              }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${
+                  i === 0 ? 'bg-amber-100 text-amber-600' :
+                  i === 1 ? 'bg-slate-200 text-slate-600' :
+                  i === 2 ? 'bg-orange-100 text-orange-600' :
+                  'bg-surface-dim text-on-surface-variant'
+                }`}>
+                  {i === 0 ? <Trophy size={20} /> :
+                   i === 1 ? <Medal size={20} /> :
+                   i === 2 ? <Medal size={20} /> :
+                   `#${i + 1}`}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-body-sm font-semibold text-on-surface truncate">{product.title}</p>
+                  <p className="text-xs text-on-surface-variant">{product.sales_count} sales</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-body-sm font-bold text-on-surface">₹{parseFloat(product.revenue).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+            {!data.topSellers?.length && (
+              <div className="text-center text-on-surface-variant py-8 text-body-sm">
+                No top sellers yet
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -141,8 +212,12 @@ export default function Dashboard() {
                   </td>
 
                   <td className="px-6 py-4 text-right">
-                    <button className="text-primary hover:text-primary-dark font-medium mr-3">View</button>
-                    <button className="text-secondary hover:text-on-surface font-medium">Update</button>
+                    <button 
+                      onClick={() => navigate(`/admin/orders?id=${order.id}`)}
+                      className="text-primary hover:text-primary-dark font-medium mr-3 bg-primary/10 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1"
+                    >
+                      <Eye size={16} /> View
+                    </button>
                   </td>
                 </tr>
               ))}

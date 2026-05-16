@@ -1,9 +1,11 @@
-import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { SlidersHorizontal, Grid3X3, List, ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "../components/ProductCard";
-import { products, categories, colorFilters } from "../data/products";
+import { categories as staticCategories, colorFilters } from "../data/products";
 import useFilterStore from "../store/filterStore";
+import { productApi } from "../services/api";
+import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 
 export default function CatalogPage() {
   const {
@@ -21,15 +23,72 @@ export default function CatalogPage() {
     setViewMode,
     setCurrentPage,
     clearFilters,
+    setCategories: setStoreCategories,
+    setSelectedBadge,
   } = useFilterStore();
+
+  const [dbProducts, setDbProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  // Sync URL params with store
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cat = params.get('category');
+    const badge = params.get('badge');
+    
+    if (cat) {
+      setStoreCategories([cat]);
+    } else {
+      setStoreCategories([]);
+    }
+
+    if (badge) {
+      setSelectedBadge(badge);
+    } else {
+      setSelectedBadge(null);
+    }
+  }, [location.search]);
+
+  // Fetch products
+  useEffect(() => {
+    const getProducts = async () => {
+      try {
+        const response = await productApi.getAll();
+        setDbProducts(response.data);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getProducts();
+  }, []);
 
   // Filter products
   const filtered = useMemo(() => {
-    let result = [...products];
+    let result = [...dbProducts];
+
+    // Map DB fields to component expectations if needed
+    result = result.map(p => ({
+      ...p,
+      name: p.title,
+      price: parseFloat(p.sellprice),
+      image: p.image1,
+      colors: [], // DB doesn't have colors yet
+      rating: 4.5,
+      reviewCount: 150
+    }));
 
     // Category filter
     if (selectedCategories.length > 0) {
       result = result.filter((p) => selectedCategories.includes(p.category));
+    }
+
+    // Badge filter
+    const selectedBadge = useFilterStore.getState().selectedBadge;
+    if (selectedBadge) {
+      result = result.filter((p) => p.badge === selectedBadge);
     }
 
     // Price filter
@@ -121,14 +180,14 @@ export default function CatalogPage() {
                   Categories
                 </h3>
                 <div className="flex flex-col gap-2.5">
-                  {categories.map((cat) => (
+                  {staticCategories.map((cat) => (
                     <label
                       key={cat}
                       className="flex items-center gap-3 cursor-pointer group"
                     >
                       <input
                         type="checkbox"
-                        checked={selectedCategories.includes(cat)}
+                        checked={selectedCategories.includes(cat.toLowerCase()) || selectedCategories.includes(cat)}
                         onChange={() => toggleCategory(cat)}
                         className="w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded accent-primary cursor-pointer"
                         aria-label={`Filter by ${cat}`}
@@ -255,34 +314,42 @@ export default function CatalogPage() {
               </div>
             </div>
 
-            {/* Grid */}
-            {paginated.length > 0 ? (
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                    : "flex flex-col gap-4"
-                }
-              >
-                {paginated.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <div className="text-center py-20">
-                <p className="text-h3 text-on-surface-variant">
-                  No products found
-                </p>
-                <p className="text-body-sm text-outline mt-2">
-                  Try adjusting your filters
-                </p>
-                <button
-                  onClick={clearFilters}
-                  className="btn-primary mt-6"
-                >
-                  Clear Filters
-                </button>
-              </div>
+              <>
+                {/* Grid */}
+                {paginated.length > 0 ? (
+                  <div
+                    className={
+                      viewMode === "grid"
+                        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                        : "flex flex-col gap-4"
+                    }
+                  >
+                    {paginated.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <p className="text-h3 text-on-surface-variant">
+                      No products found
+                    </p>
+                    <p className="text-body-sm text-outline mt-2">
+                      Try adjusting your filters
+                    </p>
+                    <button
+                      onClick={clearFilters}
+                      className="btn-primary mt-6"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Pagination */}

@@ -29,6 +29,16 @@ export default function OrderManagement() {
     fetchOrders();
   }, []);
 
+  const [searchParams, setSearchParams] = useState('');
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      setSearchParams(id);
+    }
+  }, []);
+
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -78,6 +88,8 @@ export default function OrderManagement() {
             <input 
               type="text" 
               placeholder="Search orders..." 
+              value={searchParams}
+              onChange={(e) => setSearchParams(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-outline-variant/40 rounded-lg text-body-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -102,7 +114,7 @@ export default function OrderManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/20 text-body-sm">
-              {orders.map((order) => (
+              {orders.filter(order => order.id.toString().includes(searchParams) || (order.firstname + ' ' + order.lastname).toLowerCase().includes(searchParams.toLowerCase())).map((order) => (
                 <tr key={order.id} className="hover:bg-surface-dim/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-on-surface">#{order.id}</td>
                   <td className="px-6 py-4 text-on-surface-variant">{order.firstname} {order.lastname}</td>

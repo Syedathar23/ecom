@@ -38,6 +38,7 @@ export const createOrder = async (req, res) => {
          VALUES ($1, $2, $3, $4) RETURNING *`,
         [order.id, parseInt(productId), item.quantity, item.price]
       );
+      
       orderItems.push(itemRes.rows[0]);
     }
     order.items = orderItems;

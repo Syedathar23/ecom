@@ -8,12 +8,12 @@ module.exports = {
       },
       colors: {
         primary: {
-          DEFAULT: "#4f46e5",
-          dark: "#3525cd",
-          container: "#4F46E5",
-          50: "#EEF2FF",
-          100: "#E0E7FF",
-          700: "#4338CA",
+          DEFAULT: "#FE6801",
+          dark: "#E65E00",
+          container: "#FE6801",
+          50: "#FACDAC",
+          100: "#FCA060",
+          700: "#FE8831",
         },
         secondary: "#575e70",
         "on-primary": "#FFFFFF",
@@ -41,9 +41,9 @@ module.exports = {
         container: "1280px",
       },
       boxShadow: {
-        soft: "0 1px 3px rgba(79,70,229,0.04), 0 1px 2px rgba(79,70,229,0.06)",
-        elevated: "0 4px 6px rgba(79,70,229,0.04), 0 10px 15px rgba(79,70,229,0.06)",
-        hover: "0 10px 25px rgba(79,70,229,0.08), 0 4px 10px rgba(79,70,229,0.04)",
+        soft: "0 1px 3px rgba(254,104,1,0.04), 0 1px 2px rgba(254,104,1,0.06)",
+        elevated: "0 4px 6px rgba(254,104,1,0.04), 0 10px 15px rgba(254,104,1,0.06)",
+        hover: "0 10px 25px rgba(254,104,1,0.08), 0 4px 10px rgba(254,104,1,0.04)",
       },
       fontSize: {
         display: ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "800" }],

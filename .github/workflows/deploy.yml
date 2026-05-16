@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to EC2 (Microservices)
 
 on:
   push:
@@ -12,25 +12,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .env file from Secrets
+      - name: Setup Environment Files
         run: |
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
-          echo "DIRECT_URL=${{ secrets.DIRECT_URL }}" >> .env
-          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
-          echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >> .env
-          echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" >> .env
-          echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> .env
-          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
-          echo "APP_CLOUDINARY_CLOUD_NAME=${{ secrets.APP_CLOUDINARY_CLOUD_NAME }}" >> .env
-          echo "APP_CLOUDINARY_API_KEY=${{ secrets.APP_CLOUDINARY_API_KEY }}" >> .env
-          echo "APP_CLOUDINARY_SECRET_KEY=${{ secrets.APP_CLOUDINARY_SECRET_KEY }}" >> .env
-          echo "APP_STRIPE_CANCEL_URL=${{ secrets.APP_STRIPE_CANCEL_URL }}" >> .env
-          echo "APP_STRIPE_SUCESS_URL=${{ secrets.APP_STRIPE_SUCESS_URL }}" >> .env
-          echo "APP_STRIPE_HOME_URL=${{ secrets.APP_STRIPE_HOME_URL }}" >> .env
-          echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env
-          echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env
-          echo "WAREHOUSE_STATE=${{ secrets.WAREHOUSE_STATE }}" >> .env
+          # Common env vars
+          COMMON_ENV="DATABASE_URL=${{ secrets.DATABASE_URL }}
+          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          EMAIL_HOST=${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT=${{ secrets.EMAIL_PORT }}
+          EMAIL_USER=${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}"
+
+          # Auth Service Env
+          echo "$COMMON_ENV" > services/auth/.env
+          echo "AUTH_PORT=5001" >> services/auth/.env
+
+          # Product Service Env
+          echo "$COMMON_ENV" > services/products/.env
+          echo "PRODUCT_PORT=5002" >> services/products/.env
+          echo "APP_CLOUDINARY_CLOUD_NAME=${{ secrets.APP_CLOUDINARY_CLOUD_NAME }}" >> services/products/.env
+          echo "APP_CLOUDINARY_API_KEY=${{ secrets.APP_CLOUDINARY_API_KEY }}" >> services/products/.env
+          echo "APP_CLOUDINARY_SECRET_KEY=${{ secrets.APP_CLOUDINARY_SECRET_KEY }}" >> services/products/.env
+
+          # Order Service Env
+          echo "$COMMON_ENV" > services/orders/.env
+          echo "ORDER_PORT=5003" >> services/orders/.env
+          echo "WAREHOUSE_STATE=${{ secrets.WAREHOUSE_STATE }}" >> services/orders/.env
+
+          # Gateway Service Env
+          echo "GATEWAY_PORT=5000" > services/gateway/.env
+          echo "AUTH_SERVICE_URL=http://auth-service:5001" >> services/gateway/.env
+          echo "PRODUCT_SERVICE_URL=http://product-service:5002" >> services/gateway/.env
+          echo "ORDER_SERVICE_URL=http://order-service:5003" >> services/gateway/.env
 
       - name: Copy project files to EC2
         uses: appleboy/scp-action@master
@@ -49,7 +64,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/app
-            # Rebuild and restart containers
+            # Rebuild and restart microservices
             sudo docker compose -f docker-compose.prod.yml up -d --build
             # Clean up old/unused images
             sudo docker image prune -f
