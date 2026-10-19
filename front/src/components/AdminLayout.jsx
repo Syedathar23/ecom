@@ -28,7 +28,7 @@ export default function AdminLayout({ children }) {
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
             <Dumbbell size={24} />
           </div>
-          <h1 className="text-h3 font-extrabold text-on-surface">JERAI<span className="text-primary text-sm align-top ml-1">Admin</span></h1>
+          <h1 className="text-h3 font-extrabold text-on-surface">CoreXGear<span className="text-primary text-sm align-top ml-1">Admin</span></h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -70,3 +70,4 @@ export default function AdminLayout({ children }) {
     </div>
   );
 }
+

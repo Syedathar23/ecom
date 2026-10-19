@@ -1,5 +1,5 @@
 import express from 'express';
-import { createSubWindow, customerPortal, fetchAllUsers, registerUser, renewSub, resetpassword, saveProduct, stripePrices, subStausUpdate, unsaveProducts, updatePassword, updateSubAfterCancel, updateUserField, userPasswordResetAfterClick, verifyAccount, verifyAccountAfterClick } from '../controllers/users/userController.js';
+import { createSubWindow, customerPortal, fetchAllUsers, logoutUser, registerUser, renewSub, resetpassword, saveProduct, stripePrices, subStausUpdate, unsaveProducts, updatePassword, updateSubAfterCancel, updateUserField, userPasswordResetAfterClick, verifyAccount, verifyAccountAfterClick } from '../controllers/users/userController.js';
 import { forgotPassword } from '../controllers/users/forgotPassword.js';
 import { userLogin } from '../controllers/users/userController.js';
 import { testController } from '../controllers/users/userController.js';
@@ -9,10 +9,11 @@ const route = express.Router();
 route.post("/register",registerUser);
 route.post("/forgotpassword",forgotPassword);
 route.post("/login",userLogin);
+route.post("/logout",logoutUser);
 route.get("/test",userAuth,testController);
 route.get("/allUsers",userAuth,fetchAllUsers);
 route.get("/stripeprices",userAuth,stripePrices)
-route.put("/updatepassword",updatePassword);
+route.put("/updatepassword",userAuth,updatePassword);
 route.put("/resetpassword",resetpassword);
 route.post("/resetpasswordafterclick",userPasswordResetAfterClick);
 route.post("/verifyaccount",userAuth,verifyAccount);

@@ -208,6 +208,9 @@ export default function ProductManagement() {
                   <option>Equipment</option>
                   <option>Accessories</option>
                   <option>Apparel</option>
+                  <option>Footwear</option>
+                  <option>Recovery</option>
+                  <option>Cycles</option>
                 </select>
               </div>
               <div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,10 +15,12 @@ import useCartStore from "../store/cartStore";
 import useWishlistStore from "../store/wishlistStore";
 import useToastStore from "../store/toastStore";
 import ProductCard from "../components/ProductCard";
+import { productApi } from "../services/api";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
-  const product = products.find((p) => p.id === Number(id));
+  const [product, setProduct] = useState(() => products.find((p) => p.id === Number(id)) || null);
+  const [loading, setLoading] = useState(!product);
   const addItem = useCartStore((s) => s.addItem);
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const wishlisted = useWishlistStore((s) => s.items.includes(Number(id)));
@@ -26,10 +28,55 @@ export default function ProductDetailPage() {
 
   const [mainImage, setMainImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(
-    product?.sizes?.length > 0 ? 1 : null
-  );
+  const [selectedSize, setSelectedSize] = useState(null);
   const [openAccordion, setOpenAccordion] = useState(null);
+
+  useEffect(() => {
+    const staticProd = products.find((p) => p.id === Number(id));
+    if (staticProd) {
+      setProduct(staticProd);
+      setSelectedSize(staticProd.sizes?.length > 0 ? 1 : null);
+      setLoading(false);
+      return;
+    }
+
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const response = await productApi.getById(id);
+        if (response.data) {
+          const d = response.data;
+          const imgs = [d.image1, d.image2, d.image3, d.image4, d.image5, d.image6, d.image7, d.image8].filter(Boolean);
+          const mapped = {
+            ...d,
+            id: d.id,
+            name: d.title || d.name || "Product",
+            description: d.description || "Premium athletic gear built for peak performance.",
+            price: parseFloat(d.sellprice || d.price || 0),
+            category: d.category || "General",
+            image: d.image1 || d.image || "/images/placeholder.webp",
+            images: imgs.length > 0 ? imgs : [d.image1 || d.image || "/images/placeholder.webp"],
+            colors: d.colors || [{ name: "Standard", value: "#1F2937" }],
+            sizes: d.sizes || ["Standard"],
+            badge: d.badge || null,
+            rating: d.rating || 4.7,
+            reviewCount: d.reviewCount || 120,
+            inStock: true,
+          };
+          setProduct(mapped);
+          setSelectedSize(mapped.sizes?.length > 0 ? 0 : null);
+        } else {
+          setProduct(null);
+        }
+      } catch (err) {
+        console.error("Failed to load product details:", err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
 
   const productReviews = useMemo(
     () => reviews.filter((r) => r.productId === Number(id)),
@@ -40,6 +87,14 @@ export default function ProductDetailPage() {
     () => products.filter((p) => p.id !== Number(id)).slice(0, 4),
     [id]
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-body-lg text-on-surface animate-pulse">Loading product details...</div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

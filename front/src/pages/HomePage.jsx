@@ -77,8 +77,17 @@ export default function HomePage() {
     const getProducts = async () => {
       try {
         const response = await productApi.getAll();
-        // The API returns an array directly
-        setProductsList(response.data);
+        const raw = Array.isArray(response.data) ? response.data : [];
+        const mapped = raw.map((p) => ({
+          ...p,
+          name: p.title || p.name || "Product",
+          price: parseFloat(p.sellprice ?? p.price ?? 0),
+          image: p.image1 || p.image || "/images/placeholder.webp",
+          colors: p.colors || [],
+          rating: p.rating || 4.5,
+          reviewCount: p.reviewCount || 150,
+        }));
+        setProductsList(mapped);
       } catch (err) {
         console.error("Failed to fetch products:", err);
       } finally {
@@ -97,9 +106,17 @@ export default function HomePage() {
     <div className="min-h-screen">
       {/* HERO SECTION */}
       <section className="relative overflow-hidden bg-gradient-to-br from-on-surface via-gray-900 to-primary/80">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/30 blur-[120px]" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-indigo-400/20 blur-[100px]" />
+        {/* Hero background image — 45% opacity so gradient dominates */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/hero-bg.jpg')", opacity: 0.45 }}
+        />
+        {/* Gradient overlay on top of image to restore brand colors */}
+        <div className="absolute inset-0 bg-gradient-to-br from-on-surface/80 via-gray-900/60 to-primary/50" />
+        {/* Blur glows */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-primary/30 blur-[120px] opacity-30" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-indigo-400/20 blur-[100px] opacity-30" />
         </div>
         <div className="max-w-container mx-auto px-6 py-20 lg:py-32 relative z-10">
           <div className="max-w-2xl">
@@ -285,7 +302,7 @@ export default function HomePage() {
             Ready to Transform Your Training?
           </motion.h2>
           <motion.p {...fadeUp} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-body-lg text-white/80 mt-4 max-w-xl mx-auto">
-            Join thousands of athletes who trust JERAI for their fitness journey. Sign up today and get 15% off your first order.
+            Join thousands of athletes who trust CoreXGear for their fitness journey. Sign up today and get 15% off your first order.
           </motion.p>
           <motion.div {...fadeUp} viewport={{ once: true }} transition={{ delay: 0.2 }}>
             <Link to="/auth" className="inline-flex items-center gap-2 bg-white text-primary font-semibold px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors mt-8 text-body-md">
@@ -297,3 +314,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+

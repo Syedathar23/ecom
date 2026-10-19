@@ -4,7 +4,7 @@ import ProductCard from "../components/ProductCard";
 import { categories as staticCategories, colorFilters } from "../data/products";
 import useFilterStore from "../store/filterStore";
 import { productApi } from "../services/api";
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
 export default function CatalogPage() {
@@ -82,7 +82,9 @@ export default function CatalogPage() {
 
     // Category filter
     if (selectedCategories.length > 0) {
-      result = result.filter((p) => selectedCategories.includes(p.category));
+      result = result.filter((p) =>
+        selectedCategories.some((cat) => cat.toLowerCase() === (p.category || "").toLowerCase())
+      );
     }
 
     // Badge filter
